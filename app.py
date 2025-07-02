@@ -62,10 +62,26 @@ if uploaded_file:
         fig2 = model.plot_components(forecast)
         st.pyplot(fig2)
 
+        # 📅 Forecast Summary by Quarter
+        st.subheader("📋 Forecast Summary by Quarter (in $000s)")
+
+        forecast_summary = forecast[["ds", "yhat"]].copy()
+        forecast_summary = forecast_summary[forecast_summary["ds"] > df["ds"].max()]  # Only future
+        forecast_summary["Quarter"] = forecast_summary["ds"].dt.to_period("Q")
+        quarterly_summary = (
+            forecast_summary.groupby("Quarter")["yhat"]
+            .sum()
+            .reset_index()
+            .rename(columns={"yhat": "Forecasted Revenue ($000s)"})
+        )
+        quarterly_summary["Forecasted Revenue ($000s)"] = (quarterly_summary["Forecasted Revenue ($000s)"] / 1000).round(1)
+
+        st.dataframe(quarterly_summary)
+
         # AI Analysis with GROQ
         st.subheader("🤖 AI-Generated Forecast Commentary")
 
-        data_for_ai = df.tail(60).to_json(orient="records")  # Send only recent data for context
+        data_for_ai = df.tail(60).to_json(orient="records")
 
         client = Groq(api_key=GROQ_API_KEY)
         prompt = f"""
